@@ -37,7 +37,8 @@ fi
 if [ "$(id -u)" -eq 0 ]; then
     SUDO=""
 else
-    SUDO="sudo"
+# -E to keep proxy settings
+    SUDO="sudo -E"
 fi
 
 retry_run() {
