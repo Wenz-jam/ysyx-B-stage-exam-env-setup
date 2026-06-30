@@ -3,6 +3,13 @@
 # Repository URLs configuration
 GITEE_MIRROR="https://gitee.com/mirrors"
 GITHUB_YSYX_B_STAGE_CI_REPO="https://github.com/sashimi-yzh/ysyx-submit-test.git"
+ROM_ARCHIVE_NAME="rom.tar.bz2"
+ROM_ARCHIVE_ENC_NAME="rom.tar.bz2.enc"
+ROM_ARCHIVE_SHA256="ddc128ff3a8e65637ce2e1e2267aa1cb875cab12e23cbdc5e620f5ced8266f76"
+ROM_ARCHIVE_ENC_SHA256="e9d121c2671be1fa6442ede657b54b490a387f7b63f85fdc43d7d574df1d5c16"
+ROM_ARCHIVE_KEY="3e56938d9d8140a7bb75"
+ROM_ARCHIVE_ENC_URL="${GITHUB_MIRROR}https://github.com/OSCPU/ysyx-B-stage-exam-env-setup/releases/download/2026/rom.tar.bz2.enc"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RED='\e[31m'
 GREEN='\e[32m'
@@ -85,6 +92,12 @@ sanity_check() {
         error "Please run '$0 env' to install the required tools and re-run this command."
         exit 1
     fi
+
+    if ! archive_sha256_is_valid "$ROM_ARCHIVE_NAME" "$ROM_ARCHIVE_SHA256"; then
+        error "Sanity check failed. rom.tar.bz2 is missing or has an unexpected checksum."
+        error "Please run '$0 env' to download and decrypt the ROM archive, then retry."
+        exit 1
+    fi
 }
 
 check_git_config() {
@@ -107,6 +120,45 @@ check_git_config() {
             git config --global user.email "$email"
             success "Set git user.email to '$email'"
         fi
+    fi
+}
+
+archive_sha256_is_valid() {
+    local file_path expected_sha256 actual_sha256
+
+    file_path="$1"
+    expected_sha256="$2"
+
+    if [ ! -f "$file_path" ]; then
+        return 1
+    fi
+
+    read -r actual_sha256 _ < <(sha256sum "$file_path")
+    [ "$actual_sha256" = "$expected_sha256" ]
+}
+
+prepare_rom_archive() {
+    if archive_sha256_is_valid "$ROM_ARCHIVE_NAME" "$ROM_ARCHIVE_SHA256"; then
+        info "rom.tar.bz2 already exists and is valid."
+        return 0
+    fi
+
+    if archive_sha256_is_valid "$ROM_ARCHIVE_ENC_NAME" "$ROM_ARCHIVE_ENC_SHA256"; then
+        info "Found valid rom.tar.bz2.enc, decrypting rom.tar.bz2 ..."
+    else
+        info "Downloading rom.tar.bz2.enc from $ROM_ARCHIVE_ENC_URL ..."
+        retry_run wget -O "$ROM_ARCHIVE_ENC_NAME" "$ROM_ARCHIVE_ENC_URL"
+        if ! archive_sha256_is_valid "$ROM_ARCHIVE_ENC_NAME" "$ROM_ARCHIVE_ENC_SHA256"; then
+            error "Downloaded rom.tar.bz2.enc has unexpected checksum."
+            exit 1
+        fi
+    fi
+
+    retry_run openssl aes256 -d -k "$ROM_ARCHIVE_KEY" -in "$ROM_ARCHIVE_ENC_NAME" -out "$ROM_ARCHIVE_NAME"
+
+    if ! archive_sha256_is_valid "$ROM_ARCHIVE_NAME" "$ROM_ARCHIVE_SHA256"; then
+        error "rom.tar.bz2 failed checksum validation after decrypting."
+        exit 1
     fi
 }
 
@@ -144,6 +196,8 @@ setup_env() {
         cd -
         rm -rf $TMPDIR
     fi
+
+    prepare_rom_archive
 
     success "Environment setup completed."
 }
@@ -226,11 +280,9 @@ EOF
     retry_run git clone --depth 1 -b ysyx6 https://github.com/OSCPU/ysyxSoC
     retry_run git clone --depth 1 https://github.com/NJU-ProjectN/riscv-tests-am
     retry_run git clone --depth 1 https://github.com/NJU-ProjectN/riscv-arch-test-am
-    # download nes rom
+    # nes rom
     cd $YSYX_HOME/fceux-am/nes
-    retry_run wget -O rom.tar.bz2 https://box.nju.edu.cn/f/3e56938d9d8140a7bb75/\?dl\=1
-    tar -xjf rom.tar.bz2
-    rm rom.tar.bz2
+    tar -xjf "$SCRIPT_DIR/rom.tar.bz2"
     # apply patches
     cd $YSYX_HOME/rt-thread-am
     git am $YSYX_HOME/patch/rt-thread-am/*
