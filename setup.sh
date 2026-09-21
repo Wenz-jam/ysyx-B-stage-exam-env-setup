@@ -410,7 +410,7 @@ pack_repo() {
     fi
 
     info "Creating encrypted archive: $ENCRYPTED_ARCHIVE"
-    tar cj ysyx-workbench activate.sh bin .exam_notice_enable | openssl aes256 -k "$KEY" > "$ENCRYPTED_ARCHIVE"
+    tar cj --mtime="$(date -Iseconds)" ysyx-workbench activate.sh bin .exam_notice_enable | openssl aes256 -k "$KEY" > "$ENCRYPTED_ARCHIVE"
 
     success "Pack completed."
     info "Plain archive: $GREEN$PLAIN_ARCHIVE"
