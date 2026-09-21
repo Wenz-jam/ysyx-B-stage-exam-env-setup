@@ -203,19 +203,19 @@ setup_env() {
 }
 
 setup_repo() {
-	if [ -d "ysyx-workbench" ]; then
-		error "Directory 'ysyx-workbench' already exists in $(pwd)."
-		info "If you want to re-clone, please remove or move this directory first."
-		exit 1
-	fi
+    if [ -d "ysyx-workbench" ]; then
+        error "Directory 'ysyx-workbench' already exists in $(pwd)."
+        info "If you want to re-clone, please remove or move this directory first."
+        exit 1
+    fi
 
-	# clone repo
-	retry_run git clone --depth 1 -b $1 ${GITHUB_YSYX_B_STAGE_CI_REPO} ysyx-workbench
-	# create activate.sh with unique exam session ID
-	local EXAM_SESSION_ID
-	EXAM_SESSION_ID=$(base64 /dev/random | head -c 16)
-	echo "EXAM_SESSION_ID='$EXAM_SESSION_ID'" > activate.sh
-	cat >> activate.sh <<'EOF'
+    # clone repo
+    retry_run git clone --depth 1 -b $1 ${GITHUB_YSYX_B_STAGE_CI_REPO} ysyx-workbench
+    # create activate.sh with unique exam session ID
+    local EXAM_SESSION_ID
+    EXAM_SESSION_ID=$(base64 /dev/random | head -c 16)
+    echo "EXAM_SESSION_ID='$EXAM_SESSION_ID'" > activate.sh
+    cat >> activate.sh <<'EOF'
 
 show_exam_notice() {
     local enable_file="$B_EXAM_HOME/.exam_notice_enable"
@@ -267,7 +267,7 @@ export PATH=$B_EXAM_HOME/bin:$PATH
 
 show_exam_notice
 EOF
-	source activate.sh
+    source activate.sh
     # cd into workbench
     cd $YSYX_HOME
     # disable git tracer
@@ -374,10 +374,10 @@ pack_repo() {
 
     PLAIN_ARCHIVE="${BRANCH_NAME_STUDENT_ID}-ysyx-workbench.tar.bz2"
     ENCRYPTED_ARCHIVE="${BRANCH_NAME_STUDENT_ID}-ysyx-b-exam.tar.bz2"
-	if [ ! -d "$YSYX_HOME" ]; then
-		error "Directory 'ysyx-workbench' not found in $(pwd). Aborting."
-		exit 1
-	fi
+    if [ ! -d "$YSYX_HOME" ]; then
+        error "Directory 'ysyx-workbench' not found in $(pwd). Aborting."
+        exit 1
+    fi
 
     info "Running pre-pack clean targets..."
     make -C "$YSYX_HOME/nemu" clean || true
@@ -396,8 +396,8 @@ pack_repo() {
     fi
     tar cjf "$PLAIN_ARCHIVE" ysyx-workbench
 
-	info "Running clean_repo to strip VCS metadata..."
-	clean_repo
+    info "Running clean_repo to strip VCS metadata..."
+    clean_repo
 
     # If a key file already exists, reuse it as the key.
     if [ -f ysyx-b-exam-key.txt ]; then
